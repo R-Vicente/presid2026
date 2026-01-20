@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previsão 2ª Volta - Presidenciais 2026</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f9fafb;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2.2rem;
+            color: #111827;
+            margin-bottom: 0.6rem;
+        }
+        .subtitulo {
+            color: #6b7280;
+            margin-bottom: 1.8rem;
+            font-size: 1.1rem;
+        }
+        .carregamento {
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .tabs {
+            display: flex;
+            gap: 0.6rem;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 1.8rem;
+        }
+        .tab {
+            padding: 0.9rem 1.8rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: #374151; }
+        .tab.ativa {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+        .conteudo {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 1.8rem;
+        }
+        .controles, .resultados {
+            background: white;
+            padding: 1.8rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h2 {
+            font-size: 1.4rem;
+            margin-bottom: 1.2rem;
+            color: #111827;
+        }
+        .tab-conteudo {
+            display: none;
+        }
+        .tab-conteudo.ativa {
+            display: block;
+        }
+        .grupo-controlo {
+            margin-bottom: 1.8rem;
+        }
+        .etiqueta-controlo {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .info-votos {
+            color: #6b7280;
+            font-size: 0.8rem;
+        }
+        .container-slider {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            margin-bottom: 0.6rem;
+        }
+        .etiqueta-slider {
+            font-size: 0.8rem;
+            color: #6b7280;
+            width: 110px;
+            flex-shrink: 0;
+        }
+        input[type="range"] {
+            flex: 1;
+            height: 9px;
+            border-radius: 5px;
+            background: #e5e7eb;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            border: none;
+        }
+        .valor-mostrado {
+            font-weight: 600;
+            font-size: 0.9rem;
+            width: 3.2rem;
+            text-align: right;
+        }
+        .info-transferencia {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.3rem;
+        }
+        .divisor {
+            border-top: 1px solid #e5e7eb;
+            margin: 1.8rem 0;
+            padding-top: 1.8rem;
+        }
+        .texto-ajuda {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.3rem;
+        }
+        .cartoes-resultado {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem;
+            margin-bottom: 1.8rem;
+        }
+        .cartao-resultado {
+            padding: 1.8rem;
+            border-radius: 10px;
+            border: 2px solid;
+        }
+        .cartao-resultado.seguro {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+        .cartao-resultado.ventura {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        .cartao-resultado .candidato {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 0.6rem;
+        }
+        .cartao-resultado .percentagem {
+            font-size: 2.4rem;
+            font-weight: 700;
+        }
+        .cartao-resultado.seguro .percentagem { color: #dc2626; }
+        .cartao-resultado.ventura .percentagem { color: #2563eb; }
+        .cartao-resultado .votos {
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-top: 0.6rem;
+        }
+        .cartao-resultado .info-extra {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.9rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .total-votos {
+            padding: 1.2rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #6b7280;
+            margin-bottom: 1.8rem;
+        }
+        .container-grafico {
+            margin-bottom: 1.8rem;
+        }
+        .info-vitoria-margem {
+            margin-top: 1.2rem;
+            padding: 1.2rem;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        .info-vitoria-margem .principal {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        .info-vitoria-margem .detalhe {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.3rem;
+        }
+        .interpretacao {
+            background: white;
+            padding: 1.8rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-top: 1.8rem;
+        }
+        .interpretacao p {
+            margin-bottom: 0.9rem;
+            color: #374151;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .interpretacao p:last-child {
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+        .item-sensibilidade {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 0.6rem;
+        }
+        .etiqueta-sensibilidade {
+            font-size: 0.9rem;
+            color: #374151;
+            flex: 1;
+        }
+        .barra-sensibilidade {
+            flex: 2;
+            height: 22px;
+            background: #e5e7eb;
+            border-radius: 5px;
+            margin: 0 1.2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .preenchimento-sensibilidade {
+            height: 100%;
+            background: linear-gradient(to right, #dc2626, #2563eb);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+        .valor-sensibilidade {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #374151;
+            min-width: 70px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Previsão 2ª Volta - Presidenciais 2026</h1>
+        <p class="subtitulo">Seguro vs Ventura</p>
+
+        <div id="carregamento" class="carregamento">
+            <h2>A carregar Python e bibliotecas...</h2>
+            <p style="color: #6b7280; margin-top: 1.2rem;">esta parte pode ser lenta mas se chegar a 1 min façam refresh)</p>
+        </div>
+
+        <div id="aplicacao" style="display: none;">
+            <div class="tabs">
+                <button class="tab ativa" onclick="mudarTab('transferencia')">Transferência Direta</button>
+                <button class="tab" onclick="mudarTab('montecarlo')">Simulação de Monte Carlo</button>
+            </div>
+
+            <div class="conteudo">
+                <div class="controles">
+                    <h2>Parâmetros de Votação</h2>
+                    <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1.2rem;">
+                        transferência de votos e abstenção para cada candidato
+                    </p>
+
+                    <div class="grupo-controlo">
+                        <div class="etiqueta-controlo">
+                            <span>Cotrim </span>
+                            <span class="info-votos">902.564 votos (1ª volta)</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Transferência -></span>
+                            <input type="range" id="cotrim" min="0" max="100" value="60" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="cotrim-val">60</span>%</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Abstenção</span>
+                            <input type="range" id="cotrim-abs" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="cotrim-abs-val">0</span>%</span>
+                        </div>
+                        <div class="info-transferencia">
+                            <span>Seguro: <span id="cotrim-seg">0</span></span>
+                            <span>Ventura: <span id="cotrim-ven">0</span></span>
+                            <span>Abstenção: <span id="cotrim-abs-qtd">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="grupo-controlo">
+                        <div class="etiqueta-controlo">
+                            <span>Gouveia e Melo</span>
+                            <span class="info-votos">695.088 votos (1ª volta)</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Transferência -></span>
+                            <input type="range" id="gouveia" min="0" max="100" value="55" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="gouveia-val">55</span>%</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Abstenção</span>
+                            <input type="range" id="gouveia-abs" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="gouveia-abs-val">0</span>%</span>
+                        </div>
+                        <div class="info-transferencia">
+                            <span>Seguro: <span id="gouveia-seg">0</span></span>
+                            <span>Ventura: <span id="gouveia-ven">0</span></span>
+                            <span>Abstenção: <span id="gouveia-abs-qtd">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="grupo-controlo">
+                        <div class="etiqueta-controlo">
+                            <span>LMM </span>
+                            <span class="info-votos">637.394 votos (1ª volta)</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Transferência -></span>
+                            <input type="range" id="marquesmendes" min="0" max="100" value="70" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="marquesmendes-val">70</span>%</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Abstenção</span>
+                            <input type="range" id="marquesmendes-abs" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="marquesmendes-abs-val">0</span>%</span>
+                        </div>
+                        <div class="info-transferencia">
+                            <span>Seguro: <span id="marquesmendes-seg">0</span></span>
+                            <span>Ventura: <span id="marquesmendes-ven">0</span></span>
+                            <span>Abstenção: <span id="marquesmendes-abs-qtd">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="grupo-controlo">
+                        <div class="etiqueta-controlo">
+                            <span>Esquerda (BE+PCP+Livre)</span>
+                            <span class="info-votos">247.437 votos (1ª volta)</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Transferência -></span>
+                            <input type="range" id="esquerda" min="0" max="100" value="90" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="esquerda-val">90</span>%</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Abstenção</span>
+                            <input type="range" id="esquerda-abs" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="esquerda-abs-val">0</span>%</span>
+                        </div>
+                        <div class="info-transferencia">
+                            <span>Seguro: <span id="esquerda-seg">0</span></span>
+                            <span>Ventura: <span id="esquerda-ven">0</span></span>
+                            <span>Abstenção: <span id="esquerda-abs-qtd">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="grupo-controlo">
+                        <div class="etiqueta-controlo">
+                            <span>Outros</span>
+                            <span class="info-votos">76.414 votos (1ª volta)</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Transferência -></span>
+                            <input type="range" id="outros" min="0" max="100" value="50" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="outros-val">50</span>%</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Abstenção</span>
+                            <input type="range" id="outros-abs" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="outros-abs-val">0</span>%</span>
+                        </div>
+                        <div class="info-transferencia">
+                            <span>Seguro: <span id="outros-seg">0</span></span>
+                            <span>Ventura: <span id="outros-ven">0</span></span>
+                            <span>Abstenção: <span id="outros-abs-qtd">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="grupo-controlo divisor">
+                        <div class="etiqueta-controlo">
+                            <span>Mobilização da abstenção geral</span>
+                            <span class="info-votos">5.250.099 (1ª volta)</span>
+                        </div>
+                        <div class="container-slider">
+                            <span class="etiqueta-slider">Mobilização</span>
+                            <input type="range" id="abstencao" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="abstencao-val">0</span>%</span>
+                        </div>
+                        <p class="texto-ajuda">
+                            <span id="abstencao-novos">0</span> novos votantes (distribuídos à proporção dos resultados da 1ª volta)
+                        </p>
+                    </div>
+
+                    <div class="grupo-controlo divisor">
+                        <div class="etiqueta-controlo">
+                            <span>Abstenção extra dos eleitores de Seguro (1ª volta)</span>
+                            <span class="info-votos"><span id="abs-seguro-val">0</span>%</span>
+                        </div>
+                        <div class="container-deslizador">
+                            <span class="etiqueta-deslizador">Abstenção</span>
+                            <input type="range" id="abs-seguro-extra" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="abs-seguro-val">0</span>%</span>
+                        </div>
+                    </div>
+
+                    <div class="grupo-controlo">
+                        <div class="etiqueta-controlo">
+                            <span>Abstenção extra dos eleitores de Ventura (1ª volta)</span>
+                            <span class="info-votos"><span id="abs-ventura-val">0</span>%</span>
+                        </div>
+                        <div class="container-deslizador">
+                            <span class="etiqueta-deslizador">Abstenção</span>
+                            <input type="range" id="abs-ventura-extra" min="0" max="100" value="0" oninput="atualizarResultados()">
+                            <span class="valor-mostrado"><span id="abs-ventura-val">0</span>%</span>
+                        </div>
+                    </div>
+
+                    <div id="parametros-mc" class="divisor" style="display: none;">
+                        <h2 style="font-size: 1.3rem;">Parâmetros Monte Carlo</h2>
+                        
+                        <div class="grupo-controlo">
+                            <div class="etiqueta-controlo">
+                                <span>Simulações</span>
+                                <span class="info-votos"><span id="simulacoes-val">10.000</span></span>
+                            </div>
+                            <div class="container-slider">
+                                <input type="range" id="simulacoes" min="1000" max="50000" step="1000" value="10000" oninput="atualizarParametrosMC()">
+                            </div>
+                        </div>
+
+                        <div class="grupo-controlo">
+                            <div class="etiqueta-controlo">
+                                <span>Incerteza</span>
+                                <span class="info-votos"><span id="incerteza-val">3.0</span>%</span>
+                            </div>
+                            <div class="container-slider">
+                                <input type="range" id="incerteza" min="1" max="10" step="0.5" value="3" oninput="atualizarParametrosMC()">
+                            </div>
+                            <p class="texto-ajuda">Variação aleatória aplicada a cada transferência</p>
+                        </div>
+
+                        <button onclick="executarMonteCarlo()" style="width: 100%; padding: 0.9rem; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; margin-top: 1.2rem;">
+                            Correr Simulação
+                        </button>
+                    </div>
+                </div>
+
+                <div class="resultados">
+                    <div id="transferencia-conteudo" class="tab-conteudo ativa">
+                        <h2>Resultado Previsto</h2>
+                        <div class="cartoes-resultado">
+                            <div class="cartao-resultado seguro">
+                                <div class="candidato">Seguro</div>
+                                <div class="percentagem" id="seguro-percentagem">0.00%</div>
+                                <div class="votos" id="seguro-votos">0 votos</div>
+                            </div>
+                            <div class="cartao-resultado ventura">
+                                <div class="candidato">Ventura</div>
+                                <div class="percentagem" id="ventura-percentagem">0.00%</div>
+                                <div class="votos" id="ventura-votos">0 votos</div>
+                            </div>
+                        </div>
+                        <div class="total-votos">
+                            Total de votos: <span id="total-votos-qtd">0</span> | 
+                            Total abstenção na 2ª volta: <span id="total-abstencao-qtd">0</span>
+                        </div>
+
+                        <div class="container-grafico">
+                            <h2>Origem dos Votos de Seguro</h2>
+                            <div id="grafico-fluxo"></div>
+                        </div>
+                    </div>
+
+                    <div id="montecarlo-conteudo" class="tab-conteudo">
+                        <h2>Resultados da Simulação Monte Carlo</h2>
+                        <div class="cartoes-resultado">
+                            <div class="cartao-resultado seguro">
+                                <div class="candidato">Seguro</div>
+                                <div class="percentagem" id="mc-seguro-percentagem">0.00%</div>
+                                <div class="info-extra">
+                                    <div>IC 95%: <span id="mc-seguro-ic">0% - 0%</span></div>
+                                    <div style="margin-top: 0.6rem;">Probabilidade de vitória: <span id="mc-seguro-vitoria">0%</span></div>
+                                </div>
+                            </div>
+                            <div class="cartao-resultado ventura">
+                                <div class="candidato">Ventura</div>
+                                <div class="percentagem" id="mc-ventura-percentagem">0.00%</div>
+                                <div class="info-extra">
+                                    <div>IC 95%: <span id="mc-ventura-ic">0% - 0%</span></div>
+                                    <div style="margin-top: 0.6rem;">Probabilidade de vitória: <span id="mc-ventura-vitoria">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="total-votos">
+                            Baseado em <span id="mc-runs-display">10.000</span> simulações com <span id="mc-uncertainty-display">3.0</span>% de incerteza
+                        </div>
+                        <div class="info-vitoria-margem">
+                            <div class="principal">Vitória com margem >= 15%: <span id="mc-landslide">0%</span> das simulações</div>
+                            <div class="detalhe">Em <span id="mc-landslide-count">0</span> simulações o vencedor ganhou por 15 p.p. ou +</div>
+                        </div>
+
+                        <div class="container-grafico">
+                            <h2>Distribuição dos resultados</h2>
+                            <div id="mc-distribution-chart"></div>
+                        </div>
+
+                        <div class="container-grafico">
+                            <h2>Análise de Sensibilidade</h2>
+                            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1.2rem;">
+                                Impacto de cada parâmetro no resultado final (variação de ±10%)
+                            </p>
+                            <div id="mc-sensitivity-container"></div>
+                        </div>
+
+                        <div class="interpretacao">
+                            <h2>Interpretação</h2>
+                            <p>
+                                Se repetíssemos o processo de recolha de dados e cálculo do intervalo muitas vezes, em 95% desses casos o intervalo continha o verdadeiro valor
+                            </p>
+                            <p>
+                                A probabilidade de vitória é calculada com base na percentagem de simulações em que 
+                                cada candidato obteve mais de 50% dos votos.
+                            </p>
+                            <p>
+                                A análise de sensibilidade mostra quais parâmetros têm maior impacto no resultado. 
+                                Parâmetros com maior impacto merecem mais atenção na análise política.
+                            </p>
+                            <p id="mc-conclusao">
+                                Clique em "Executar Simulação" para ver os resultados...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pyodide;
+        let ttabtual = 'transferencia';
+
+        const votosPrimeiraVolta = {
+            seguro: 1754895,
+            ventura: 1326644,
+            cotrim: 902564,
+            gouveia: 695088,
+            marquesmendes: 637394,
+            esquerda: 247437,
+            outros: 76414,
+            abstencao: 5250099,
+            inscritos: 11017133
+        };
+
+        function formatarNumero(num) {
+            return Math.round(num).toLocaleString('pt-PT');
+        }
+
+        function formatarPercentagem(num) {
+            return num.toFixed(2) + '%';
+        }
+
+        function mudarTab(tab) {
+            ttabtual = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativa'));
+            document.querySelector(`.tab[onclick="mudarTab('${tab}')"]`).classList.add('ativa');
+            document.querySelectorAll('.tab-conteudo').forEach(c => c.classList.remove('ativa'));
+            document.getElementById(tab + '-conteudo').classList.add('ativa');
+            document.getElementById('parametros-mc').style.display = tab === 'montecarlo' ? 'block' : 'none';
+            if (tab === 'transferencia') atualizarResultados();
+        }
+
+        function atualizarResultados() {
+            const transferencias = {
+                cotrim: parseInt(document.getElementById('cotrim').value),
+                gouveia: parseInt(document.getElementById('gouveia').value),
+                marquesmendes: parseInt(document.getElementById('marquesmendes').value),
+                esquerda: parseInt(document.getElementById('esquerda').value),
+                outros: parseInt(document.getElementById('outros').value),
+                abstencao: parseInt(document.getElementById('abstencao').value)
+            };
+
+            const abstencoes = {
+                cotrim: parseInt(document.getElementById('cotrim-abs').value),
+                gouveia: parseInt(document.getElementById('gouveia-abs').value),
+                marquesmendes: parseInt(document.getElementById('marquesmendes-abs').value),
+                esquerda: parseInt(document.getElementById('esquerda-abs').value),
+                outros: parseInt(document.getElementById('outros-abs').value)
+            };
+
+            Object.keys(transferencias).forEach(key => {
+                const elem = document.getElementById(key + '-val');
+                if (elem) elem.textContent = transferencias[key];
+            });
+
+            Object.keys(abstencoes).forEach(key => {
+                const elem = document.getElementById(key + '-abs-val');
+                if (elem) elem.textContent = abstencoes[key];
+            });
+
+            const taxaAbsSeguroExtra = parseInt(document.getElementById('abs-seguro-extra').value) / 100;
+            const taxaAbsVenturaExtra = parseInt(document.getElementById('abs-ventura-extra').value) / 100;
+
+            let totalSeguro = votosPrimeiraVolta.seguro * (1 - taxaAbsSeguroExtra);
+            let totalVentura = votosPrimeiraVolta.ventura * (1 - taxaAbsVenturaExtra);
+
+            let totalAbstencao = 0;
+
+
+            const candidatos = ['cotrim', 'gouveia', 'marquesmendes', 'esquerda', 'outros'];
+            candidatos.forEach(candidate => {
+                const votosTotais = votosPrimeiraVolta[candidate];
+                const taxaAbstencao = abstencoes[candidate] / 100;
+                const votosAbstidos = votosTotais * taxaAbstencao;
+                const votosTransferidos = votosTotais - votosAbstidos;
+
+                const taxaTransferencia = transferencias[candidate] / 100;
+                const votosParaSeguro = votosTransferidos * taxaTransferencia;
+                const votosParaVentura = votosTransferidos * (1 - taxaTransferencia);
+
+                totalSeguro += votosParaSeguro;
+                totalVentura += votosParaVentura;
+                totalAbstencao += votosAbstidos;
+
+                document.getElementById(candidate + '-seg').textContent = formatarNumero(votosParaSeguro);
+                document.getElementById(candidate + '-ven').textContent = formatarNumero(votosParaVentura);
+                document.getElementById(candidate + '-abs-qtd').textContent = formatarNumero(votosAbstidos);
+            });
+
+
+            const novosVotantes = votosPrimeiraVolta.abstencao * (transferencias.abstencao / 100);
+
+            const totalAtualPrimeiraVolta = votosPrimeiraVolta.seguro + votosPrimeiraVolta.ventura;
+            const proporcaoSeguro = totalAtualPrimeiraVolta > 0 ? votosPrimeiraVolta.seguro / totalAtualPrimeiraVolta : 0.5;
+
+            const votosDaAbstencaoParaSeguro = novosVotantes * proporcaoSeguro;
+            totalSeguro += votosDaAbstencaoParaSeguro;
+            totalVentura += (novosVotantes - votosDaAbstencaoParaSeguro);
+
+            document.getElementById('abstencao-novos').textContent = formatarNumero(novosVotantes);
+
+    
+            const totalVotos = totalSeguro + totalVentura;
+
+           
+            const percentagemSeguro = totalVotos > 0 ? (totalSeguro / totalVotos) * 100 : 0;
+            const percentagemVentura = totalVotos > 0 ? (totalVentura / totalVotos) * 100 : 0;
+
+            document.getElementById('seguro-percentagem').textContent = formatarPercentagem(percentagemSeguro);
+            document.getElementById('seguro-votos').textContent = formatarNumero(totalSeguro) + ' votos';
+            document.getElementById('ventura-percentagem').textContent = formatarPercentagem(percentagemVentura);
+            document.getElementById('ventura-votos').textContent = formatarNumero(totalVentura) + ' votos';
+            document.getElementById('total-votos-qtd').textContent = formatarNumero(totalVotos);
+
+
+            const abstencaoGeralNaoMobilizada = votosPrimeiraVolta.abstencao - novosVotantes;
+            const abstencaoExtraSeguro = votosPrimeiraVolta.seguro * taxaAbsSeguroExtra;
+            const abstencaoExtraVentura = votosPrimeiraVolta.ventura * taxaAbsVenturaExtra;
+
+            const totalAbstencaoReal = totalAbstencao + abstencaoExtraSeguro + abstencaoExtraVentura + abstencaoGeralNaoMobilizada;
+
+            document.getElementById('total-abstencao-qtd').textContent = formatarNumero(totalAbstencaoReal);
+
+            const dadosFluxo = [{
+                x: [
+                    totalSeguro - votosDaAbstencaoParaSeguro,  
+                    (votosPrimeiraVolta.cotrim * (1 - abstencoes.cotrim/100)) * (transferencias.cotrim/100),
+                    (votosPrimeiraVolta.gouveia * (1 - abstencoes.gouveia/100)) * (transferencias.gouveia/100),
+                    (votosPrimeiraVolta.marquesmendes * (1 - abstencoes.marquesmendes/100)) * (transferencias.marquesmendes/100),
+                    (votosPrimeiraVolta.esquerda * (1 - abstencoes.esquerda/100)) * (transferencias.esquerda/100),
+                    (votosPrimeiraVolta.outros * (1 - abstencoes.outros/100)) * (transferencias.outros/100),
+                    votosDaAbstencaoParaSeguro
+                ],
+                y: ['Seguro 1ª volta (após abst. extra)', 'Cotrim (IL)', 'Gouveia e Melo', 'L. MM (PSD)', 'Esquerda', 'Outros', 'Abstenção mobilizada'],
+                type: 'bar',
+                orientation: 'h',
+                marker: {
+                    color: ['#ef4444', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899', '#6b7280', '#10b981']
+                }
+            }];
+
+            Plotly.newPlot('grafico-fluxo', dadosFluxo, {
+                margin: {t: 20, b: 40, l: 180, r: 20},
+                height: 380,
+                xaxis: {title: 'Votos para Seguro'}
+            }, {displayModeBar: false});
+        }
+
+        function atualizarParametrosMC() {
+            const simulacoes = parseInt(document.getElementById('simulacoes').value);
+            const incerteza = parseFloat(document.getElementById('incerteza').value);
+            document.getElementById('simulacoes-val').textContent = formatarNumero(simulacoes);
+            document.getElementById('incerteza-val').textContent = incerteza.toFixed(1);
+        }
+
+        async function executarMonteCarlo() {
+            if (!pyodide) {
+                alert("Python ainda não está carregado");
+                return;
+            }
+
+            const simulacoes = parseInt(document.getElementById('simulacoes').value);
+            const incerteza = parseFloat(document.getElementById('incerteza').value);
+            const transferencias = {
+                cotrim: parseInt(document.getElementById('cotrim').value),
+                gouveia: parseInt(document.getElementById('gouveia').value),
+                marquesmendes: parseInt(document.getElementById('marquesmendes').value),
+                esquerda: parseInt(document.getElementById('esquerda').value),
+                outros: parseInt(document.getElementById('outros').value),
+                abstencao: parseInt(document.getElementById('abstencao').value)
+            };
+
+            const abstencoes = {
+                cotrim: parseInt(document.getElementById('cotrim-abs').value),
+                gouveia: parseInt(document.getElementById('gouveia-abs').value),
+                marquesmendes: parseInt(document.getElementById('marquesmendes-abs').value),
+                esquerda: parseInt(document.getElementById('esquerda-abs').value),
+                outros: parseInt(document.getElementById('outros-abs').value)
+            };
+
+            document.getElementById('mc-runs-display').textContent = formatarNumero(simulacoes);
+            document.getElementById('mc-uncertainty-display').textContent = incerteza.toFixed(1);
+
+            const codigo = `
+import numpy as np
+
+def monte_carlo_simulation(simulacoes, incerteza, transferencias, abstencoes, primeira_volta):
+    resultados = []
+    percentagens_seguro = []
+    
+    for _ in range(simulacoes):
+        transferencias_aleatorias = {}
+        abstencoes_aleatorias = {}
+        
+        for chave, valor in transferencias.items():
+            variacao = (np.random.random() - 0.5) * 2 * incerteza
+            transferencias_aleatorias[chave] = np.clip(valor + variacao, 0, 100)
+        
+        for chave, valor in abstencoes.items():
+            variacao = (np.random.random() - 0.5) * 2 * incerteza
+            abstencoes_aleatorias[chave] = np.clip(valor + variacao, 0, 100)
+        
+        total_seguro = primeira_volta['seguro']
+        total_ventura = primeira_volta['ventura']
+        
+        for candidato in ['cotrim', 'gouveia', 'marquesmendes', 'esquerda', 'outros']:
+            votos_totais = primeira_volta[candidato]
+            
+            variacao_abst = (np.random.random() - 0.5) * 2 * incerteza
+            abst_aleatoria = np.clip(abstencoes_aleatorias[candidato] + variacao_abst, 0, 100)
+            taxa_abstencao_var = abst_aleatoria / 100
+            
+            votos_abstencao = votos_totais * taxa_abstencao_var
+            votos_transferidos = votos_totais - votos_abstencao
+            
+            taxa_transferencia = transferencias_aleatorias[candidato] / 100
+            votos_para_seguro = votos_transferidos * taxa_transferencia
+            votos_para_ventura = votos_transferidos * (1 - taxa_transferencia)
+            
+            total_seguro += votos_para_seguro
+            total_ventura += votos_para_ventura
+        
+        novos_votantes = primeira_volta['abstencao'] * (transferencias_aleatorias['abstencao'] / 100)
+        total_atual = primeira_volta['seguro'] + primeira_volta['ventura']
+        proporcao_seguro = primeira_volta['seguro'] / total_atual if total_atual > 0 else 0.5
+        votos_da_abstencao = novos_votantes * proporcao_seguro
+        
+        total_seguro += votos_da_abstencao
+        total_ventura += (novos_votantes - votos_da_abstencao)
+        
+        total_votos = total_seguro + total_ventura
+        percentagem_seguro = (total_seguro / total_votos) * 100 if total_votos > 0 else 0
+        percentagem_ventura = (total_ventura / total_votos) * 100 if total_votos > 0 else 0
+        
+        percentagens_seguro.append(percentagem_seguro)
+        resultados.append({
+            'percentagem_seguro': percentagem_seguro,
+            'percentagem_ventura': percentagem_ventura
+        })
+    
+    array_resultados = np.array([(r['percentagem_seguro'], r['percentagem_ventura']) for r in resultados])
+    percentagens_seguro_ord = np.sort(array_resultados[:, 0])
+    percentagens_ventura_ord = np.sort(array_resultados[:, 1])
+    
+    media_seguro = np.mean(percentagens_seguro_ord)
+    media_ventura = np.mean(percentagens_ventura_ord)
+    
+    ci_seguro_inf = np.percentile(percentagens_seguro_ord, 2.5)
+    ci_seguro_sup = np.percentile(percentagens_seguro_ord, 97.5)
+    ci_ventura_inf = np.percentile(percentagens_ventura_ord, 2.5)
+    ci_ventura_sup = np.percentile(percentagens_ventura_ord, 97.5)
+    
+    vitorias_seguro = sum(1 for r in resultados if r['percentagem_seguro'] > 50)
+    vitorias_ventura = sum(1 for r in resultados if r['percentagem_ventura'] > 50)
+    
+    prob_vitoria_seguro = (vitorias_seguro / simulacoes) * 100
+    prob_vitoria_ventura = (vitorias_ventura / simulacoes) * 100
+    
+    contagem_landslide = sum(1 for r in resultados if abs(r['percentagem_seguro'] - r['percentagem_ventura']) >= 15)
+    prob_landslide = (contagem_landslide / simulacoes) * 100
+    
+    # Histograma
+    hist, bin_edges = np.histogram(percentagens_seguro, bins=50)
+    
+    return {
+        'seguro': {
+            'media': media_seguro,
+            'ci_inf': ci_seguro_inf,
+            'ci_sup': ci_seguro_sup,
+            'prob_vitoria': prob_vitoria_seguro
+        },
+        'ventura': {
+            'media': media_ventura,
+            'ci_inf': ci_ventura_inf,
+            'ci_sup': ci_ventura_sup,
+            'prob_vitoria': prob_vitoria_ventura
+        },
+        'prob_landslide': prob_landslide,
+        'contagem_landslide': contagem_landslide,
+        'histograma': {
+            'contagens': hist.tolist(),
+            'bins': bin_edges.tolist()
+        },
+        'percentagens_brutas': percentagens_seguro
+    }
+
+primeira_volta = ${JSON.stringify(votosPrimeiraVolta)}
+transferencias = ${JSON.stringify(transferencias)}
+abstencoes = ${JSON.stringify(abstencoes)}
+resultados = monte_carlo_simulation(${simulacoes}, ${incerteza}, transferencias, abstencoes, primeira_volta)
+resultados
+`;
+
+            try {
+                const resultados = await pyodide.runPythonAsync(codigo);
+                const dados = resultados.toJs({dict_converter: Object.fromEntries});
+                
+                document.getElementById('mc-seguro-percentagem').textContent = formatarPercentagem(dados.seguro.media);
+                document.getElementById('mc-seguro-ic').textContent = formatarPercentagem(dados.seguro.ci_inf) + ' - ' + formatarPercentagem(dados.seguro.ci_sup);
+                document.getElementById('mc-seguro-vitoria').textContent = formatarPercentagem(dados.seguro.prob_vitoria);
+                
+                document.getElementById('mc-ventura-percentagem').textContent = formatarPercentagem(dados.ventura.media);
+                document.getElementById('mc-ventura-ic').textContent = formatarPercentagem(dados.ventura.ci_inf) + ' - ' + formatarPercentagem(dados.ventura.ci_sup);
+                document.getElementById('mc-ventura-vitoria').textContent = formatarPercentagem(dados.ventura.prob_vitoria);
+                
+                document.getElementById('mc-landslide').textContent = formatarPercentagem(dados.prob_landslide);
+                document.getElementById('mc-landslide-count').textContent = formatarNumero(dados.contagem_landslide);
+                
+                const vencedor = dados.seguro.prob_vitoria > 50 ? 'Seguro' : 'Ventura';
+                const probVitoria = dados.seguro.prob_vitoria > 50 ? dados.seguro.prob_vitoria : dados.ventura.prob_vitoria;
+                document.getElementById('mc-conclusao').textContent = vencedor + ' tem vantagem com ' + formatarPercentagem(probVitoria) + ' de probabilidade de vitória.';
+                
+                // Histograma
+                const centrosBins = dados.histograma.bins.slice(0, -1).map((v, i) => (v + dados.histograma.bins[i + 1]) / 2);
+                const tracoHist = {
+                    x: centrosBins,
+                    y: dados.histograma.contagens,
+                    type: 'bar',
+                    marker: {color: '#3b82f6'},
+                    name: 'Frequência'
+                };
+                
+                const formas = [
+                    {
+                        type: 'line',
+                        x0: dados.seguro.ci_inf,
+                        x1: dados.seguro.ci_inf,
+                        y0: 0,
+                        y1: Math.max(...dados.histograma.contagens),
+                        line: {color: '#dc2626', width: 2, dash: 'dash'},
+                        name: 'IC 2.5%'
+                    },
+                    {
+                        type: 'line',
+                        x0: dados.seguro.ci_sup,
+                        x1: dados.seguro.ci_sup,
+                        y0: 0,
+                        y1: Math.max(...dados.histograma.contagens),
+                        line: {color: '#dc2626', width: 2, dash: 'dash'},
+                        name: 'IC 97.5%'
+                    },
+                    {
+                        type: 'line',
+                        x0: 50,
+                        x1: 50,
+                        y0: 0,
+                        y1: Math.max(...dados.histograma.contagens),
+                        line: {color: '#6b7280', width: 2, dash: 'dot'},
+                        name: '50%'
+                    }
+                ];
+                
+                Plotly.newPlot('mc-distribution-chart', [tracoHist], {
+                    margin: {t: 20, b: 60, l: 60, r: 20},
+                    height: 300,
+                    xaxis: {title: '% Votos Seguro'},
+                    yaxis: {title: 'Frequência'},
+                    shapes: formas,
+                    showlegend: false
+                }, {displayModeBar: false});
+                
+                // Sensibilidade
+                const dadosSensibilidade = calcularSensibilidade(transferencias, abstencoes);
+                mostrarSensibilidade(dadosSensibilidade);
+                
+            } catch (erro) {
+                console.error('Erro ao executar Monte Carlo:', erro);
+                alert('Erro ao executar simulação: ' + erro.message);
+            }
+        }
+
+        function calcularResultadoDireto(transferencias, abstencoes) {
+            const candidatos = ['cotrim', 'gouveia', 'marquesmendes', 'esquerda', 'outros'];
+            let totalSeguro = votosPrimeiraVolta.seguro;
+            let totalVentura = votosPrimeiraVolta.ventura;
+            
+            candidatos.forEach(candidate => {
+                const votosTotais = votosPrimeiraVolta[candidate];
+                const taxaAbstencao = abstencoes[candidate] / 100;
+                const votosAbstidos = votosTotais * taxaAbstencao;
+                const votosTransferidos = votosTotais - votosAbstidos;
+                
+                const taxaTransferencia = transferencias[candidate] / 100;
+                const votosParaSeguro = votosTransferidos * taxaTransferencia;
+                const votosParaVentura = votosTransferidos * (1 - taxaTransferencia);
+                
+                totalSeguro += votosParaSeguro;
+                totalVentura += votosParaVentura;
+            });
+            
+            const novosVotantes = votosPrimeiraVolta.abstencao * (transferencias.abstencao / 100);
+            const totalAtual = votosPrimeiraVolta.seguro + votosPrimeiraVolta.ventura;
+            const proporcaoSeguro = totalAtual > 0 ? votosPrimeiraVolta.seguro / totalAtual : 0.5;
+            const votosDaAbstencao = novosVotantes * proporcaoSeguro;
+            
+            totalSeguro += votosDaAbstencao;
+            totalVentura += (novosVotantes - votosDaAbstencao);
+            
+            const totalVotos = totalSeguro + totalVentura;
+            const percentagemSeguro = (totalSeguro / totalVotos) * 100;
+            const percentagemVentura = (totalVentura / totalVotos) * 100;
+            
+            return {percentagemSeguro, percentagemVentura};
+        }
+
+        function calcularSensibilidade(transferencias, abstencoes) {
+            const resultadoBase = calcularResultadoDireto(transferencias, abstencoes);
+            const baseSeguro = resultadoBase.percentagemSeguro;
+            
+            const sensibilidade = [];
+            const parametros = [
+                {chave: 'cotrim', etiqueta: 'Transferência Cotrim', tipo: 'transferencia'},
+                {chave: 'gouveia', etiqueta: 'Transferência Gouveia', tipo: 'transferencia'},
+                {chave: 'marquesmendes', etiqueta: 'Transferência Marques Mendes', tipo: 'transferencia'},
+                {chave: 'esquerda', etiqueta: 'Transferência Esquerda', tipo: 'transferencia'},
+                {chave: 'outros', etiqueta: 'Transferência Outros', tipo: 'transferencia'},
+                {chave: 'cotrim', etiqueta: 'Abstenção Cotrim', tipo: 'abstencao'},
+                {chave: 'gouveia', etiqueta: 'Abstenção Gouveia', tipo: 'abstencao'},
+                {chave: 'marquesmendes', etiqueta: 'Abstenção Marques Mendes', tipo: 'abstencao'},
+                {chave: 'esquerda', etiqueta: 'Abstenção Esquerda', tipo: 'abstencao'},
+                {chave: 'outros', etiqueta: 'Abstenção Outros', tipo: 'abstencao'}
+            ];
+            
+            parametros.forEach(param => {
+                const transferenciasMod = {...transferencias};
+                const abstencoesMod = {...abstencoes};
+                
+                if (param.tipo === 'transferencia') {
+                    transferenciasMod[param.chave] = Math.min(100, transferencias[param.chave] + 10);
+                } else {
+                    abstencoesMod[param.chave] = Math.min(100, abstencoes[param.chave] + 10);
+                }
+                
+                const resultado = calcularResultadoDireto(transferenciasMod, abstencoesMod);
+                const impacto = resultado.percentagemSeguro - baseSeguro;
+                
+                sensibilidade.push({
+                    etiqueta: param.etiqueta,
+                    impacto: impacto
+                });
+            });
+            
+            return sensibilidade.sort((a, b) => Math.abs(b.impacto) - Math.abs(a.impacto));
+        }
+
+        function mostrarSensibilidade(dados) {
+            const container = document.getElementById('mc-sensitivity-container');
+            container.innerHTML = '';
+            
+            const maxImpacto = Math.max(...dados.map(d => Math.abs(d.impacto)));
+            
+            dados.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item-sensibilidade';
+                
+                const impacto = item.impacto;
+                const absImpacto = Math.abs(impacto);
+                const percentagem = (absImpacto / maxImpacto) * 100;
+                
+                div.innerHTML = `
+                    <span class="etiqueta-sensibilidade">${item.etiqueta}</span>
+                    <div class="barra-sensibilidade">
+                        <div class="preenchimento-sensibilidade" style="width: ${percentagem}%; background: ${impacto > 0 ? '#dc2626' : '#2563eb'}"></div>
+                    </div>
+                    <span class="valor-sensibilidade">${impacto > 0 ? '+' : ''}${impacto.toFixed(2)}%</span>
+                `;
+                
+                container.appendChild(div);
+            });
+        }
+
+        async function iniciarPython() {
+            try {
+                pyodide = await loadPyodide();
+                await pyodide.loadPackage(['numpy']);
+                document.getElementById('carregamento').style.display = 'none';
+                document.getElementById('aplicacao').style.display = 'block';
+                atualizarResultados();
+            } catch (erro) {
+                console.error('Erro ao carregar Python:', erro);
+                document.getElementById('carregamento').innerHTML = '<h2 style="color: #dc2626;">Erro ao carregar Python</h2><p style="color: #6b7280; margin-top: 1.2rem;">' + erro.message + '</p>';
+            }
+        }
+
+        iniciarPython();
+    </script>
+</body>
+</html>
